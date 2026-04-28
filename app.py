@@ -1,5 +1,9 @@
 from webapp import create_app
 
+# 下面两行自动读取项目根目录的 .env
+from dotenv import load_dotenv
+load_dotenv()
+
 app = create_app()
 
 if __name__ == "__main__":
