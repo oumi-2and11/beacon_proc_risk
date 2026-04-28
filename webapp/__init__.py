@@ -4,6 +4,10 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object("config.Config")
 
+    # ---- 初始化数据库（SQLAlchemy + 自动建表） ----
+    from webapp.db import init_db
+    init_db(app)
+
     # ---- 蓝图注册（与 layout.html 的 url_for 保持一致） ----
     from webapp.views.main import main_bp
     from webapp.views.process_view import process_bp
