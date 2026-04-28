@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block title %}进程详情 - {{ proc.name }} ({{ proc.pid }}){% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <div>
+    <h2>进程详情</h2>
+    <div class="muted">PID: <span class="mono">{{ proc.pid }}</span> · {{ proc.name }}</div>
+  </div>
+  <div class="hstack">
+    <form method="post" action="{{ url_for('process.scan_process', pid=proc.pid) }}">
+      <button class="btn primary" type="submit">扫描此进程</button>
+    </form>
+    <a class="btn" href="{{ url_for('process.list_processes') }}">返回列表</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">基本信息</h3>
+  <table class="table">
+    <tbody>
+      <tr><th>PID</th><td class="mono">{{ proc.pid }}</td></tr>
+      <tr><th>名称</th><td>{{ proc.name }}</td></tr>
+      <tr><th>用户</th><td>{{ proc.user }}</td></tr>
+      <tr><th>PPID</th><td class="mono">{{ proc.ppid }}</td></tr>
+      <tr><th>路径</th><td class="mono">{{ proc.path }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% if latest_scan %}
+<div class="card">
+  <div class="hstack" style="justify-content: space-between;">
+    <h3 style="margin:0;">最近一次扫描结果</h3>
+    <a class="btn" href="{{ url_for('scan.scan_detail', scan_id=latest_scan.scan_id) }}">查看扫描详情</a>
+  </div>
+  <div class="hstack" style="margin-top:10px;">
+    <span class="badge {{ latest_scan.level|lower }}">{{ latest_scan.level }}</span>
+    <span>Score: <b>{{ latest_scan.score }}</b></span>
+    <span class="muted">scan_id: <span class="mono">{{ latest_scan.scan_id }}</span></span>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

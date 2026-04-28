@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}风险看板 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h2>风险看板</h2>
+  <span class="muted">基于扫描历史汇总（MVP）</span>
+</div>
+
+<div class="kpi">
+  <div class="card">
+    <div class="kpi-title">扫描次数</div>
+    <div class="kpi-value">{{ kpi.total_scans }}</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">高风险</div>
+    <div class="kpi-value" style="color: var(--high);">{{ kpi.high }}</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">中风险</div>
+    <div class="kpi-value" style="color: var(--mid);">{{ kpi.mid }}</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">低风险</div>
+    <div class="kpi-value" style="color: var(--low);">{{ kpi.low }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">最近高风险扫描</h3>
+  <table class="table">
+    <thead>
+      <tr><th>时间</th><th>scan_id</th><th>目标</th><th>分数</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for s in recent_high %}
+      <tr>
+        <td class="mono">{{ s.created_at }}</td>
+        <td class="mono">{{ s.scan_id }}</td>
+        <td class="mono">{{ s.target }}</td>
+        <td><b>{{ s.score }}</b></td>
+        <td><a class="btn" href="{{ url_for('scan.scan_detail', scan_id=s.scan_id) }}">查看</a></td>
+      </tr>
+      {% endfor %}
+      {% if recent_high|length == 0 %}
+      <tr><td colspan="5" class="muted">暂无高风险记录（示例数据阶段）。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

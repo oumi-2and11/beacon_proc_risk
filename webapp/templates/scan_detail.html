@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% block title %}扫描详情 - {{ scan.scan_id }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <div>
+    <h2>扫描详情</h2>
+    <div class="muted">scan_id: <span class="mono">{{ scan.scan_id }}</span></div>
+  </div>
+  <div class="hstack">
+    <a class="btn" href="{{ url_for('scan.list_scans') }}">返回扫描中心</a>
+    <a class="btn primary" href="{{ url_for('export.export_scan_json', scan_id=scan.scan_id) }}">导出 JSON</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hstack" style="justify-content: space-between;">
+    <div class="hstack">
+      <span class="badge {{ scan.level|lower }}">{{ scan.level }}</span>
+      <span>总分：<b>{{ scan.score }}</b></span>
+      <span class="muted">目标：<span class="mono">{{ scan.target }}</span></span>
+    </div>
+    <span class="muted">时间：<span class="mono">{{ scan.created_at }}</span></span>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">命中规则</h3>
+  <table class="table">
+    <thead>
+      <tr><th>RuleID</th><th>描述</th><th>证据</th></tr>
+    </thead>
+    <tbody>
+      {% for h in scan.hits %}
+      <tr>
+        <td class="mono">{{ h.rule_id }}</td>
+        <td>{{ h.title }}</td>
+        <td class="mono">{{ h.evidence }}</td>
+      </tr>
+      {% endfor %}
+      {% if scan.hits|length == 0 %}
+      <tr><td colspan="3" class="muted">本次扫描暂无规则命中（示例数据阶段）。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}ProcRisk{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a class="brand-link" href="{{ url_for('main.index') }}">ProcRisk</a>
+        <span class="brand-subtitle">主机进程风险检测</span>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-link" href="{{ url_for('main.index') }}">首页</a>
+        <a class="nav-link" href="{{ url_for('process.list_processes') }}">进程列表</a>
+        <a class="nav-link" href="{{ url_for('scan.list_scans') }}">扫描中心</a>
+        <a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">风险看板</a>
+        <a class="nav-link" href="{{ url_for('export.export_home') }}">导出报告</a>
+      </nav>
+
+      <div class="topbar-meta">
+        <span class="pill">Win11</span>
+        <span class="pill">Flask</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    {% block footer %}
+    <div class="footer-inner">
+      <span class="muted">课程作业：风险可见、可测、可感</span>
+      <span class="muted">|</span>
+      <span class="muted">ProcRisk v0.1 (MVP)</span>
+    </div>
+    {% endblock %}
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

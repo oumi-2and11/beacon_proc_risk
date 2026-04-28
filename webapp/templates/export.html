@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}导出与报告 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h2>导出与报告</h2>
+  <span class="muted">用于报告截图/附录（JSON/HTML）</span>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">快速导出</h3>
+  <div class="hstack">
+    <a class="btn primary" href="{{ url_for('export.export_latest_json') }}">导出最近一次扫描（JSON）</a>
+  </div>
+  <p class="muted" style="margin-bottom:0;">
+    后续接 MySQL 后，本页可增加：按 scan_id / 按 PID 导出、导出 HTML 报告等。
+  </p>
+</div>
+{% endblock %}

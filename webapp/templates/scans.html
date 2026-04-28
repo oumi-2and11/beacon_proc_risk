@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block title %}扫描中心 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h2>扫描中心</h2>
+  <span class="muted">保留扫描历史（后续可接 MySQL 持久化）</span>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>时间</th>
+        <th>scan_id</th>
+        <th>模式</th>
+        <th>目标</th>
+        <th>风险等级</th>
+        <th>分数</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in scans %}
+      <tr>
+        <td class="mono">{{ s.created_at }}</td>
+        <td class="mono">{{ s.scan_id }}</td>
+        <td>{{ s.mode }}</td>
+        <td class="mono">{{ s.target }}</td>
+        <td><span class="badge {{ s.level|lower }}">{{ s.level }}</span></td>
+        <td><b>{{ s.score }}</b></td>
+        <td><a class="btn" href="{{ url_for('scan.scan_detail', scan_id=s.scan_id) }}">查看</a></td>
+      </tr>
+      {% endfor %}
+      {% if scans|length == 0 %}
+      <tr><td colspan="7" class="muted">暂无扫描记录。请进入任意进程详情页点击“扫描此进程”。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

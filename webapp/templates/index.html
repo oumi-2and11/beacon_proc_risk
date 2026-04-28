@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}首页 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h1>主机进程异常分析与风险评分系统</h1>
+  <div class="hstack">
+    <a class="btn primary" href="{{ url_for('process.list_processes') }}">进入进程列表</a>
+    <a class="btn" href="{{ url_for('scan.list_scans') }}">查看扫描中心</a>
+  </div>
+</div>
+
+<div class="card">
+  <p class="muted" style="margin-top:0;">
+    功能主线：枚举本机进程（含后台）→ 进入进程详情 → 单点扫描 → 输出风险评分与证据链 → 导出报告。
+  </p>
+  <ul>
+    <li>进程枚举：PID / 名称 / 路径 / 用户 / 父进程</li>
+    <li>检测维度：父子拓扑、路径/签名、网络 Beaconing（可扩展 RWX 内存）</li>
+    <li>输出：风险分值 + 等级 + 命中规则 + 证据链 + 导出</li>
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block title %}进程列表 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h2>进程列表</h2>
+  <span class="muted">点击“查看”进入详情页进行单进程扫描</span>
+</div>
+
+<div class="card">
+  <form method="get" action="{{ url_for('process.list_processes') }}" class="hstack">
+    <input class="input" type="text" name="q" placeholder="按 PID 或名称搜索" value="{{ q }}">
+    <button class="btn primary" type="submit">搜索</button>
+    <a class="btn" href="{{ url_for('process.list_processes') }}">清空</a>
+  </form>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>PID</th>
+        <th>名称</th>
+        <th>用户</th>
+        <th>PPID</th>
+        <th>路径</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in processes %}
+      <tr>
+        <td class="mono">{{ p.pid }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.user }}</td>
+        <td class="mono">{{ p.ppid }}</td>
+        <td class="mono">{{ p.path }}</td>
+        <td>
+          <a class="btn" href="{{ url_for('process.process_detail', pid=p.pid) }}">查看</a>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if processes|length == 0 %}
+      <tr><td colspan="6" class="muted">没有匹配的进程</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
