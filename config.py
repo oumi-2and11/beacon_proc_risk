@@ -15,7 +15,7 @@ class Config:
     DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
     DB_PORT = os.environ.get("DB_PORT", "3306")
     DB_USER = os.environ.get("DB_USER", "oumi")
-    DB_PASSWORD = os.environ.get("DB_PASSWORD", "leiwei123")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "CHANGE_ME_password")
     DB_NAME = os.environ.get("DB_NAME", "beacon_proc_risk")
 
     SQLALCHEMY_DATABASE_URI = (

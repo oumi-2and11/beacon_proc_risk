@@ -26,7 +26,7 @@ def scan_run_to_dict(run):
             elif h.evidence_json:
                 evidence_str = str(h.evidence_json)
             else:
-                evidence_str = h.rule_id
+                evidence_str = "暂无证据数据"
             hits.append({
                 "rule_id": h.rule_id,
                 "title": h.title,
@@ -66,8 +66,8 @@ def create_scan(target, mode="single"):
         except ValueError:
             pass
 
-    # process_catalog：每次扫描新建一条进程快照（以时间戳区分）
-    process_key = f"{pid}:{int(now.timestamp())}"
+    # process_catalog：每次扫描新建一条进程快照（使用微秒时间戳+UUID片段确保唯一性）
+    process_key = f"{pid}:{now.strftime('%Y%m%d%H%M%S%f')}:{uuid.uuid4().hex[:6]}"
     proc = ProcessCatalog(
         pid=pid,
         process_key=process_key,

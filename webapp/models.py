@@ -43,7 +43,7 @@ class Allowlist(db.Model):
     note = db.Column(db.String(255), nullable=True)
     enabled = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow
+        db.DateTime, nullable=False, default=lambda: datetime.utcnow()
     )
 
     def __repr__(self):
@@ -70,7 +70,7 @@ class ScanRun(db.Model):
         nullable=False, default="finished",
     )
     requested_by = db.Column(db.String(64), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow())
     started_at = db.Column(db.DateTime, nullable=True)
     finished_at = db.Column(db.DateTime, nullable=True)
     duration_ms = db.Column(db.Integer, nullable=True)
@@ -113,10 +113,10 @@ class ProcessCatalog(db.Model):
         nullable=False, default="unknown",
     )
     first_seen_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow
+        db.DateTime, nullable=False, default=lambda: datetime.utcnow()
     )
     last_seen_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, nullable=False, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow()
     )
 
     scan_targets = db.relationship("ScanTarget", back_populates="process")
@@ -145,7 +145,7 @@ class ScanTarget(db.Model):
     )
     target_label = db.Column(db.String(64), nullable=True)
     collected_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow
+        db.DateTime, nullable=False, default=lambda: datetime.utcnow()
     )
 
     scan_run = db.relationship("ScanRun", back_populates="targets")
@@ -221,7 +221,7 @@ class RuleHit(db.Model):
     )
     score_delta = db.Column(db.Integer, nullable=False, default=0)
     evidence_json = db.Column(db.JSON, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow())
 
     scan_target = db.relationship("ScanTarget", back_populates="hits")
 
@@ -304,7 +304,7 @@ class NetConnection(db.Model):
     remote_ip = db.Column(db.String(45), nullable=True)
     remote_port = db.Column(db.Integer, nullable=True)
     state = db.Column(db.String(32), nullable=True)
-    seen_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    seen_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow())
 
     scan_target = db.relationship("ScanTarget", back_populates="connections")
 
