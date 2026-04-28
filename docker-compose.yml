@@ -1,0 +1,40 @@
+# docker-compose.yml
+# 用法：在仓库根目录执行 `docker compose up -d`
+# 密码通过同目录的 .env 文件注入（参考 .env.example，不要提交 .env）
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: proc_risk_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}   # 通过 .env 注入
+      MYSQL_DATABASE: beacon_proc_risk
+      MYSQL_USER: oumi
+      MYSQL_PASSWORD: ${DB_PASSWORD}                 # 通过 .env 注入
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+
+  # phpMyAdmin：可选的 Web 管理界面，方便开发期查看/管理数据库
+  # 访问地址：http://127.0.0.1:8081（本地开发用，生产环境请移除或限制访问）
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: proc_risk_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:

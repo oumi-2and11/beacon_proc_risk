@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 
+from webapp.db import db
+from webapp.models import ScanRun, ScanTarget, ProcessCatalog
+from webapp.views.scan_view import create_scan, scan_run_to_dict
+
 process_bp = Blueprint("process", __name__)
 
-# --- 临时“伪存储”：后续你换 MySQL 时，把这里替换为数据库读写即可 ---
-# scans_store: scan_id -> scan dict
-# scans_index: list of scan_id (按时间倒序/顺序)
-from webapp.views.scan_view import scans_store, scans_index, make_fake_scan  # 简化：先跨模块复用
 
 @process_bp.route("/", methods=["GET"])
 def list_processes():
@@ -21,24 +21,27 @@ def list_processes():
 
     return render_template("processes.html", processes=processes, q=q)
 
+
 @process_bp.route("/<int:pid>", methods=["GET"])
-def process_detail(pid: int):
+def process_detail(pid):
     proc = {"pid": pid, "name": "python.exe", "user": "YOU", "path": r"C:\Python\python.exe", "ppid": 1234}
 
-    # 找到“最近一次针对该 PID 的扫描”（示例逻辑）
-    latest_scan = None
-    for scan_id in reversed(scans_index):
-        s = scans_store.get(scan_id)
-        if s and s.get("target") == f"pid:{pid}":
-            latest_scan = s
-            break
+    # 从数据库查找"最近一次针对该 PID 的扫描"
+    latest_run = (
+        ScanRun.query
+        .join(ScanTarget, ScanRun.id == ScanTarget.scan_run_id)
+        .join(ProcessCatalog, ScanTarget.process_id == ProcessCatalog.id)
+        .filter(ProcessCatalog.pid == pid)
+        .order_by(ScanRun.created_at.desc())
+        .first()
+    )
+    latest_scan = scan_run_to_dict(latest_run) if latest_run else None
 
     return render_template("process_detail.html", proc=proc, latest_scan=latest_scan)
 
+
 @process_bp.route("/<int:pid>/scan", methods=["POST"])
-def scan_process(pid: int):
-    # 这里先生成“假扫描结果”，后续替换为真实检测引擎
-    scan = make_fake_scan(target=f"pid:{pid}", mode="single")
-    scans_store[scan["scan_id"]] = scan
-    scans_index.append(scan["scan_id"])
+def scan_process(pid):
+    # 创建扫描记录并写入数据库
+    scan = create_scan(target=f"pid:{pid}", mode="single")
     return redirect(url_for("scan.scan_detail", scan_id=scan["scan_id"]))
