@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, abort, current_app
 
 from webapp.db import db
 from webapp.models import ScanRun, ScanTarget, ProcessCatalog
 from webapp.views.scan_view import create_scan, scan_run_to_dict
+from utils.process_collector import get_process_list, get_process_by_pid
 
 process_bp = Blueprint("process", __name__)
 
@@ -11,20 +12,20 @@ process_bp = Blueprint("process", __name__)
 def list_processes():
     q = request.args.get("q", "").strip()
 
-    processes = [
-        {"pid": 1234, "name": "explorer.exe", "user": "YOU", "path": r"C:\Windows\explorer.exe", "ppid": 1000},
-        {"pid": 2345, "name": "python.exe", "user": "YOU", "path": r"C:\Python\python.exe", "ppid": 1234},
-    ]
-
-    if q:
-        processes = [p for p in processes if q.lower() in p["name"].lower() or q == str(p["pid"])]
+    process_infos = get_process_list(
+        max_processes=current_app.config.get("MAX_PROCESSES", 5000), query=q
+    )
+    processes = [p.to_dict() for p in process_infos]
 
     return render_template("processes.html", processes=processes, q=q)
 
 
 @process_bp.route("/<int:pid>", methods=["GET"])
 def process_detail(pid):
-    proc = {"pid": pid, "name": "python.exe", "user": "YOU", "path": r"C:\Python\python.exe", "ppid": 1234}
+    proc_info = get_process_by_pid(pid)
+    if proc_info is None:
+        abort(404)
+    proc = proc_info.to_detail_dict()
 
     # 从数据库查找"最近一次针对该 PID 的扫描"
     latest_run = (
