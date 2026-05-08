@@ -15,6 +15,7 @@ def create_app():
     from webapp.views.dashboard_view import dashboard_bp
     from webapp.views.export_view import export_bp
     from webapp.views.api import api_bp
+    from webapp.views.allowlist_view import allowlist_bp
 
     # 首页
     app.register_blueprint(main_bp)
@@ -33,5 +34,8 @@ def create_app():
 
     # API：/api/
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    # 白名单：/allowlist/
+    app.register_blueprint(allowlist_bp, url_prefix="/allowlist")
 
     return app

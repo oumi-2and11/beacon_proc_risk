@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% block title %}白名单管理 - ProcRisk{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h2>白名单管理</h2>
+  <div class="hstack">
+    <span class="muted">白名单中的进程将在「可疑」视图中隐藏</span>
+    <a class="btn btn-sm" href="{{ url_for('process.list_processes') }}">返回进程列表</a>
+  </div>
+</div>
+
+<!-- 添加条目 -->
+<div class="card">
+  <h3 style="margin-top:0;">添加白名单条目</h3>
+  <form method="post" action="{{ url_for('allowlist.add_entry') }}" class="hstack">
+    <select class="input" name="type" style="width:160px;">
+      <option value="process_name">按进程名称</option>
+      <option value="process_path">按进程路径</option>
+      <option value="remote_ip">按远端 IP</option>
+    </select>
+    <input class="input" type="text" name="value" placeholder="值（如 svchost.exe 或 C:\Windows\）" required>
+    <input class="input" type="text" name="note" placeholder="备注（可选）" style="width:180px;">
+    <button class="btn primary" type="submit">添加</button>
+  </form>
+</div>
+
+<!-- 条目列表 -->
+<div class="card" style="padding:0; overflow:hidden;">
+  <table class="table table-fixed">
+    <thead>
+      <tr>
+        <th style="width:120px;">类型</th>
+        <th>值</th>
+        <th style="width:200px;">备注</th>
+        <th style="width:80px;">状态</th>
+        <th style="width:120px;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="mono">{{ e.type }}</td>
+        <td class="mono cell-ellipsis" title="{{ e.value }}">{{ e.value }}</td>
+        <td class="cell-ellipsis" title="{{ e.note }}">{{ e.note or '' }}</td>
+        <td>
+          {% if e.enabled %}
+            <span class="risk-tag tag-safe">启用</span>
+          {% else %}
+            <span class="risk-tag tag-unsigned">禁用</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="hstack">
+            <form method="post" action="{{ url_for('allowlist.toggle_entry', entry_id=e.id) }}">
+              <button class="btn btn-sm" type="submit">{{ '禁用' if e.enabled else '启用' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('allowlist.delete_entry', entry_id=e.id) }}"
+                  onsubmit="return confirm('确定删除此条目？')">
+              <button class="btn btn-sm danger" type="submit">删除</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if entries|length == 0 %}
+      <tr><td colspan="5" class="muted" style="text-align:center; padding:24px;">暂无白名单条目</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

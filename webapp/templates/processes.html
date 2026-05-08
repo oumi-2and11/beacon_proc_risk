@@ -15,9 +15,26 @@
 <div class="card">
   <form method="get" action="{{ url_for('process.list_processes') }}" class="hstack">
     <input class="input" type="text" name="q" placeholder="按 PID 或名称搜索" value="{{ q }}">
+    <input type="hidden" name="filter" value="{{ filter_tab }}">
     <button class="btn primary" type="submit">搜索</button>
-    <a class="btn" href="{{ url_for('process.list_processes') }}">清空</a>
+    <a class="btn" href="{{ url_for('process.list_processes', filter=filter_tab) }}">清空</a>
   </form>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs">
+  <a class="tab {% if filter_tab == 'all' %}active{% endif %}"
+     href="{{ url_for('process.list_processes', filter='all', q=q) }}">
+    全部 <span class="tab-count">{{ total_count }}</span>
+  </a>
+  <a class="tab {% if filter_tab == 'suspicious' %}active{% endif %}"
+     href="{{ url_for('process.list_processes', filter='suspicious', q=q) }}">
+    可疑 <span class="tab-count">{{ suspicious_count }}</span>
+  </a>
+  <a class="tab {% if filter_tab == 'high_risk' %}active{% endif %}"
+     href="{{ url_for('process.list_processes', filter='high_risk', q=q) }}">
+    高风险特征 <span class="tab-count">{{ high_risk_count }}</span>
+  </a>
 </div>
 
 {% if empty_hint %}
@@ -34,7 +51,7 @@
     <thead>
       <tr>
         <th style="width:70px;">PID</th>
-        <th style="width:160px;">名称</th>
+        <th style="width:200px;">名称</th>
         <th style="width:100px;">用户</th>
         <th style="width:70px;">PPID</th>
         <th>路径</th>
@@ -45,7 +62,13 @@
       {% for p in processes %}
       <tr>
         <td class="mono">{{ p.pid }}</td>
-        <td class="cell-ellipsis" title="{{ p.name }}">{{ p.name }}</td>
+        <td class="cell-ellipsis" title="{{ p.name }}">
+          {{ p.name }}
+          {% if p.path_suspicious %}<span class="risk-tag tag-suspicious">可疑路径</span>{% endif %}
+          {% if p.parent_child_suspicious %}<span class="risk-tag tag-suspicious">异常父子</span>{% endif %}
+          {% if p.signed_status == 'unsigned' %}<span class="risk-tag tag-unsigned">未签名</span>{% endif %}
+          {% if p.is_system and p.signed_status == 'signed' %}<span class="risk-tag tag-safe">系统</span>{% endif %}
+        </td>
         <td class="cell-ellipsis" title="{{ p.user }}">{{ p.user }}</td>
         <td class="mono">{{ p.ppid }}</td>
         <td class="mono cell-ellipsis" title="{{ p.path }}">{{ p.path }}</td>
@@ -62,13 +85,13 @@
 {% if pagination.pages > 1 %}
 <div class="pagination">
   {% if pagination.has_prev %}
-  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.prev_num, q=q) }}">上一页</a>
+  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.prev_num, q=q, filter=filter_tab) }}">上一页</a>
   {% endif %}
 
   <span class="pagination-info">{{ pagination.page }} / {{ pagination.pages }}</span>
 
   {% if pagination.has_next %}
-  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.next_num, q=q) }}">下一页</a>
+  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.next_num, q=q, filter=filter_tab) }}">下一页</a>
   {% endif %}
 </div>
 {% endif %}

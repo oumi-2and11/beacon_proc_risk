@@ -70,6 +70,8 @@ def sync_process_catalog(process_info: ProcessInfo, db_session) -> "ProcessCatal
             existing.name = process_info.name
         if process_info.exe_path:
             existing.exe_path = process_info.exe_path
+        existing.path_suspicious = process_info.path_suspicious
+        existing.parent_child_suspicious = process_info.parent_child_suspicious
         return existing
 
     record = ProcessCatalog(
@@ -84,6 +86,8 @@ def sync_process_catalog(process_info: ProcessInfo, db_session) -> "ProcessCatal
         parent_name=process_info.parent_name,
         is_system=process_info.is_system,
         signed_status=process_info.signed_status,
+        path_suspicious=process_info.path_suspicious,
+        parent_child_suspicious=process_info.parent_child_suspicious,
     )
     db_session.add(record)
     db_session.flush()

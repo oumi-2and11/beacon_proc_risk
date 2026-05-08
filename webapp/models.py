@@ -112,6 +112,8 @@ class ProcessCatalog(db.Model):
         db.Enum("unknown", "signed", "unsigned", "invalid"),
         nullable=False, default="unknown",
     )
+    path_suspicious = db.Column(db.Boolean, nullable=False, default=False)
+    parent_child_suspicious = db.Column(db.Boolean, nullable=False, default=False)
     first_seen_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.utcnow()
     )

@@ -6,7 +6,8 @@ from typing import Optional, List, Dict
 
 from utils.process_collector.models import ProcessInfo
 from utils.common.helpers import generate_process_key
-from utils.common.validators import is_system_path
+from utils.common.validators import is_system_path, is_suspicious_path
+from utils.common.constants import SUSPICIOUS_PARENT_CHILD
 
 
 def collect_single_process(
@@ -73,6 +74,15 @@ def collect_single_process(
             pass
 
         is_system = is_system_path(exe_path)
+        path_suspicious = is_suspicious_path(exe_path)
+
+        parent_child_suspicious = False
+        if parent_name and name:
+            suspicious_children = SUSPICIOUS_PARENT_CHILD.get(parent_name.lower(), [])
+            if suspicious_children and name.lower() in [c.lower() for c in suspicious_children]:
+                parent_child_suspicious = True
+
+        signed_status = "signed" if is_system else "unknown"
 
         proc_key = ""
         if create_time:
@@ -92,10 +102,12 @@ def collect_single_process(
             parent_name=parent_name,
             create_time=create_time,
             is_system=is_system,
-            signed_status="unknown",
+            signed_status=signed_status,
             process_key=proc_key,
             cpu_percent=cpu_percent,
             memory_rss=memory_rss,
+            path_suspicious=path_suspicious,
+            parent_child_suspicious=parent_child_suspicious,
         )
     except psutil.NoSuchProcess:
         return None

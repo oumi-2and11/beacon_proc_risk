@@ -26,6 +26,8 @@ class ProcessInfo:
     connections: List[dict] = field(default_factory=list)
     cpu_percent: float = 0.0
     memory_rss: int = 0
+    path_suspicious: bool = False
+    parent_child_suspicious: bool = False
 
     def to_dict(self) -> dict:
         return {

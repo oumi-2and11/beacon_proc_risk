@@ -24,8 +24,62 @@
       <tr><th>用户</th><td>{{ proc.user }}</td></tr>
       <tr><th>PPID</th><td class="mono">{{ proc.ppid }}</td></tr>
       <tr><th>路径</th><td class="mono">{{ proc.path }}</td></tr>
+      <tr><th>系统进程</th><td>{{ '是' if proc.is_system else '否' }}</td></tr>
+      <tr><th>签名状态</th>
+        <td>
+          {% if proc.signed_status == 'signed' %}
+            <span class="risk-tag tag-safe">已签名</span>
+          {% elif proc.signed_status == 'unsigned' %}
+            <span class="risk-tag tag-unsigned">未签名</span>
+          {% elif proc.signed_status == 'invalid' %}
+            <span class="risk-tag tag-unsigned">签名无效</span>
+          {% else %}
+            <span class="muted">未知</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th>可疑路径</th>
+        <td>
+          {% if proc.path_suspicious %}
+            <span class="risk-tag tag-suspicious">是</span>
+          {% else %}
+            <span class="muted">否</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th>异常父子关系</th>
+        <td>
+          {% if proc.parent_child_suspicious %}
+            <span class="risk-tag tag-suspicious">是</span>
+          {% else %}
+            <span class="muted">否</span>
+          {% endif %}
+        </td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<!-- 加入白名单 -->
+<div class="card">
+  <h3 style="margin-top:0;">加入白名单</h3>
+  <p class="muted">将此进程加入白名单后，它将在「可疑」视图中隐藏。</p>
+  <div class="hstack">
+    <form method="post" action="{{ url_for('allowlist.quick_add') }}">
+      <input type="hidden" name="add_type" value="process_name">
+      <input type="hidden" name="value" value="{{ proc.name }}">
+      <input type="hidden" name="pid" value="{{ proc.pid }}">
+      <button class="btn btn-sm" type="submit">按名称: {{ proc.name }}</button>
+    </form>
+    {% if proc.path %}
+    <form method="post" action="{{ url_for('allowlist.quick_add') }}">
+      <input type="hidden" name="add_type" value="process_path">
+      <input type="hidden" name="value" value="{{ proc.path }}">
+      <input type="hidden" name="pid" value="{{ proc.pid }}">
+      <button class="btn btn-sm" type="submit">按路径加入</button>
+    </form>
+    {% endif %}
+  </div>
 </div>
 
 {% if latest_scan %}
