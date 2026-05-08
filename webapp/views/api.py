@@ -79,6 +79,39 @@ def scan_processes():
     })
 
 
+@api_bp.route("/clear-processes", methods=["POST"])
+def clear_processes():
+    """清空 process_catalog 及关联的 scan_targets。"""
+    try:
+        # 先删关联的 scan_targets（外键依赖）
+        db.session.query(ScanTarget).delete()
+        db.session.query(ProcessCatalog).delete()
+        db.session.commit()
+        return jsonify({"ok": True, "message": "进程数据已清空"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@api_bp.route("/clear-scans", methods=["POST"])
+def clear_scans():
+    """清空 scan_runs 及所有关联子表（scan_targets, scan_scores, rule_hits, net_*）。"""
+    from webapp.models import ScanScore, RuleHit, NetBeaconStats, NetRemoteSummary, NetConnection
+    try:
+        db.session.query(NetConnection).delete()
+        db.session.query(NetRemoteSummary).delete()
+        db.session.query(NetBeaconStats).delete()
+        db.session.query(RuleHit).delete()
+        db.session.query(ScanScore).delete()
+        db.session.query(ScanTarget).delete()
+        db.session.query(ScanRun).delete()
+        db.session.commit()
+        return jsonify({"ok": True, "message": "扫描记录已清空"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @api_bp.route("/kpi", methods=["GET"])
 def kpi():
     """返回 KPI 数据，供前端局部刷新。"""

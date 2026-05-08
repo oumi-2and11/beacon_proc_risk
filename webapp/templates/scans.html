@@ -4,38 +4,87 @@
 {% block content %}
 <div class="page-title">
   <h2>扫描中心</h2>
-  <span class="muted">保留扫描历史（后续可接 MySQL 持久化）</span>
+  <div class="hstack">
+    <span class="muted">查看所有扫描记录</span>
+    <button class="btn btn-sm danger" id="btn-clear-scans" onclick="clearScans()">清空扫描记录</button>
+  </div>
 </div>
 
-<div class="card">
-  <table class="table">
+<div id="toast-container"></div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+  <table class="table table-fixed">
     <thead>
       <tr>
-        <th>时间</th>
-        <th>scan_id</th>
-        <th>模式</th>
+        <th style="width:150px;">时间</th>
+        <th style="width:120px;">scan_id</th>
+        <th style="width:80px;">模式</th>
         <th>目标</th>
-        <th>风险等级</th>
-        <th>分数</th>
-        <th>操作</th>
+        <th style="width:90px;">风险等级</th>
+        <th style="width:70px;">分数</th>
+        <th style="width:80px;">操作</th>
       </tr>
     </thead>
     <tbody>
       {% for s in scans %}
       <tr>
-        <td class="mono">{{ s.created_at }}</td>
-        <td class="mono">{{ s.scan_id }}</td>
+        <td class="mono cell-ellipsis" title="{{ s.created_at }}">{{ s.created_at }}</td>
+        <td class="mono cell-ellipsis" title="{{ s.scan_id }}">{{ s.scan_id }}</td>
         <td>{{ s.mode }}</td>
-        <td class="mono">{{ s.target }}</td>
+        <td class="mono cell-ellipsis" title="{{ s.target }}">{{ s.target }}</td>
         <td><span class="badge {{ s.level|lower }}">{{ s.level }}</span></td>
         <td><b>{{ s.score }}</b></td>
-        <td><a class="btn" href="{{ url_for('scan.scan_detail', scan_id=s.scan_id) }}">查看</a></td>
+        <td><a class="btn btn-sm" href="{{ url_for('scan.scan_detail', scan_id=s.scan_id) }}">查看</a></td>
       </tr>
       {% endfor %}
       {% if scans|length == 0 %}
-      <tr><td colspan="7" class="muted">暂无扫描记录。请进入任意进程详情页点击“扫描此进程”。</td></tr>
+      <tr><td colspan="7" class="muted" style="text-align:center; padding:24px;">暂无扫描记录</td></tr>
       {% endif %}
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function clearScans() {
+  if (!confirm('确定要清空所有扫描记录吗？此操作不可撤销。')) return;
+
+  const btn = document.getElementById('btn-clear-scans');
+  btn.disabled = true;
+  btn.textContent = '清空中...';
+
+  fetch('/api/clear-scans', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        showToast('扫描记录已清空', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast('清空失败：' + data.error, 'error');
+        btn.disabled = false;
+        btn.textContent = '清空扫描记录';
+      }
+    })
+    .catch(e => {
+      showToast('请求失败：' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '清空扫描记录';
+    });
+}
+
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + message + '</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+</script>
 {% endblock %}

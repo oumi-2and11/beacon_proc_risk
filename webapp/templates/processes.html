@@ -4,8 +4,13 @@
 {% block content %}
 <div class="page-title">
   <h2>进程列表</h2>
-  <span class="muted">数据来自最近一次扫描，点击"查看"进入详情页</span>
+  <div class="hstack">
+    <span class="muted">数据来自最近一次扫描</span>
+    <button class="btn btn-sm danger" id="btn-clear-processes" onclick="clearProcesses()">清空进程数据</button>
+  </div>
 </div>
+
+<div id="toast-container"></div>
 
 <div class="card">
   <form method="get" action="{{ url_for('process.list_processes') }}" class="hstack">
@@ -68,4 +73,48 @@
 </div>
 {% endif %}
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function clearProcesses() {
+  if (!confirm('确定要清空所有进程数据吗？此操作不可撤销。')) return;
+
+  const btn = document.getElementById('btn-clear-processes');
+  btn.disabled = true;
+  btn.textContent = '清空中...';
+
+  fetch('/api/clear-processes', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        showToast('进程数据已清空', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast('清空失败：' + data.error, 'error');
+        btn.disabled = false;
+        btn.textContent = '清空进程数据';
+      }
+    })
+    .catch(e => {
+      showToast('请求失败：' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '清空进程数据';
+    });
+}
+
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + message + '</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+</script>
 {% endblock %}
