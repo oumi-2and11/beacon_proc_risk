@@ -4,25 +4,33 @@
 {% block content %}
 <div class="page-title">
   <h2>风险看板</h2>
-  <span class="muted">基于扫描历史汇总（MVP）</span>
+  <div class="hstack">
+    <button class="btn primary" id="btn-scan" onclick="handleScan()">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">扫描进程</span>
+    </button>
+  </div>
 </div>
 
-<div class="kpi">
+<!-- Toast 容器 -->
+<div id="toast-container"></div>
+
+<div class="kpi" id="kpi-cards">
   <div class="card">
     <div class="kpi-title">扫描次数</div>
-    <div class="kpi-value">{{ kpi.total_scans }}</div>
+    <div class="kpi-value" id="kpi-total-scans">{{ kpi.total_scans }}</div>
   </div>
   <div class="card">
     <div class="kpi-title">高风险</div>
-    <div class="kpi-value" style="color: var(--high);">{{ kpi.high }}</div>
+    <div class="kpi-value" style="color: var(--high);" id="kpi-high">{{ kpi.high }}</div>
   </div>
   <div class="card">
     <div class="kpi-title">中风险</div>
-    <div class="kpi-value" style="color: var(--mid);">{{ kpi.mid }}</div>
+    <div class="kpi-value" style="color: var(--mid);" id="kpi-mid">{{ kpi.mid }}</div>
   </div>
   <div class="card">
     <div class="kpi-title">低风险</div>
-    <div class="kpi-value" style="color: var(--low);">{{ kpi.low }}</div>
+    <div class="kpi-value" style="color: var(--low);" id="kpi-low">{{ kpi.low }}</div>
   </div>
 </div>
 
@@ -43,9 +51,90 @@
       </tr>
       {% endfor %}
       {% if recent_high|length == 0 %}
-      <tr><td colspan="5" class="muted">暂无高风险记录（示例数据阶段）。</td></tr>
+      <tr><td colspan="5" class="muted">暂无高风险记录</td></tr>
       {% endif %}
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let scanning = false;
+
+async function handleScan() {
+  if (scanning) return;
+  scanning = true;
+
+  const btn = document.getElementById('btn-scan');
+  const icon = btn.querySelector('.btn-icon');
+  const text = btn.querySelector('.btn-text');
+
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  icon.textContent = '⏳';
+  text.textContent = '扫描中...';
+
+  try {
+    const resp = await fetch('/api/scan-processes', { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.ok) {
+      icon.textContent = '✅';
+      text.textContent = '扫描完成 (' + data.count + ' 个进程)';
+      btn.classList.remove('btn-loading');
+      btn.classList.add('btn-success');
+      showToast('扫描完成，共发现 ' + data.count + ' 个进程，耗时 ' + (data.duration_ms / 1000).toFixed(1) + ' 秒', 'success');
+      loadKpi();
+      setTimeout(() => {
+        icon.textContent = '🔍';
+        text.textContent = '扫描进程';
+        btn.disabled = false;
+        btn.classList.remove('btn-success');
+        scanning = false;
+      }, 3000);
+    } else {
+      throw new Error(data.error || '扫描失败');
+    }
+  } catch (e) {
+    icon.textContent = '❌';
+    text.textContent = '扫描失败，重试';
+    btn.classList.remove('btn-loading');
+    btn.classList.add('btn-danger');
+    showToast('扫描失败：' + e.message, 'error');
+    setTimeout(() => {
+      icon.textContent = '🔍';
+      text.textContent = '扫描进程';
+      btn.disabled = false;
+      btn.classList.remove('btn-danger');
+      scanning = false;
+    }, 3000);
+  }
+}
+
+async function loadKpi() {
+  try {
+    const resp = await fetch('/api/kpi');
+    const data = await resp.json();
+    document.getElementById('kpi-total-scans').textContent = data.total_scans;
+    document.getElementById('kpi-high').textContent = data.high;
+    document.getElementById('kpi-mid').textContent = data.mid;
+    document.getElementById('kpi-low').textContent = data.low;
+  } catch (e) {}
+}
+
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + message + '</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+</script>
 {% endblock %}

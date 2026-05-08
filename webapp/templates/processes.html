@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-title">
   <h2>进程列表</h2>
-  <span class="muted">点击“查看”进入详情页进行单进程扫描</span>
+  <span class="muted">数据来自最近一次扫描，点击"查看"进入详情页</span>
 </div>
 
 <div class="card">
@@ -15,35 +15,57 @@
   </form>
 </div>
 
-<div class="card">
-  <table class="table">
+{% if empty_hint %}
+<div class="card" style="text-align:center; padding:40px;">
+  <p class="muted" style="font-size:15px;">暂无进程数据，请先在<a href="{{ url_for('main.index') }}">首页</a>点击「扫描进程」采集本机进程。</p>
+</div>
+{% elif processes|length == 0 %}
+<div class="card" style="text-align:center; padding:40px;">
+  <p class="muted">没有匹配的进程</p>
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:hidden;">
+  <table class="table table-fixed">
     <thead>
       <tr>
-        <th>PID</th>
-        <th>名称</th>
-        <th>用户</th>
-        <th>PPID</th>
+        <th style="width:70px;">PID</th>
+        <th style="width:160px;">名称</th>
+        <th style="width:100px;">用户</th>
+        <th style="width:70px;">PPID</th>
         <th>路径</th>
-        <th>操作</th>
+        <th style="width:80px;">操作</th>
       </tr>
     </thead>
     <tbody>
       {% for p in processes %}
       <tr>
         <td class="mono">{{ p.pid }}</td>
-        <td>{{ p.name }}</td>
-        <td>{{ p.user }}</td>
+        <td class="cell-ellipsis" title="{{ p.name }}">{{ p.name }}</td>
+        <td class="cell-ellipsis" title="{{ p.user }}">{{ p.user }}</td>
         <td class="mono">{{ p.ppid }}</td>
-        <td class="mono">{{ p.path }}</td>
+        <td class="mono cell-ellipsis" title="{{ p.path }}">{{ p.path }}</td>
         <td>
-          <a class="btn" href="{{ url_for('process.process_detail', pid=p.pid) }}">查看</a>
+          <a class="btn btn-sm" href="{{ url_for('process.process_detail', pid=p.pid) }}">查看</a>
         </td>
       </tr>
       {% endfor %}
-      {% if processes|length == 0 %}
-      <tr><td colspan="6" class="muted">没有匹配的进程</td></tr>
-      {% endif %}
     </tbody>
   </table>
 </div>
+
+<!-- 分页 -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+  {% if pagination.has_prev %}
+  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.prev_num, q=q) }}">上一页</a>
+  {% endif %}
+
+  <span class="pagination-info">{{ pagination.page }} / {{ pagination.pages }}</span>
+
+  {% if pagination.has_next %}
+  <a class="btn btn-sm" href="{{ url_for('process.list_processes', page=pagination.next_num, q=q) }}">下一页</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}
 {% endblock %}

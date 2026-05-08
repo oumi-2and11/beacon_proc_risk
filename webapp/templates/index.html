@@ -5,14 +5,41 @@
 <div class="page-title">
   <h1>主机进程异常分析与风险评分系统</h1>
   <div class="hstack">
-    <a class="btn primary" href="{{ url_for('process.list_processes') }}">进入进程列表</a>
-    <a class="btn" href="{{ url_for('scan.list_scans') }}">查看扫描中心</a>
+    <button class="btn primary" id="btn-scan" onclick="handleScan()">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">扫描进程</span>
+    </button>
+    <a class="btn" href="{{ url_for('process.list_processes') }}">进程列表</a>
+    <a class="btn" href="{{ url_for('scan.list_scans') }}">扫描中心</a>
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div id="toast-container"></div>
+
+<!-- 快速统计卡片 -->
+<div class="kpi" id="kpi-cards">
+  <div class="card">
+    <div class="kpi-title">已收录进程</div>
+    <div class="kpi-value" id="kpi-process-count">—</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">扫描次数</div>
+    <div class="kpi-value" id="kpi-total-scans">—</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">高风险</div>
+    <div class="kpi-value" style="color: var(--high);" id="kpi-high">—</div>
+  </div>
+  <div class="card">
+    <div class="kpi-title">中/低风险</div>
+    <div class="kpi-value" id="kpi-mid-low">—</div>
   </div>
 </div>
 
 <div class="card">
   <p class="muted" style="margin-top:0;">
-    功能主线：枚举本机进程（含后台）→ 进入进程详情 → 单点扫描 → 输出风险评分与证据链 → 导出报告。
+    功能主线：点击「扫描进程」采集本机进程 → 进程列表查看 → 单点扫描 → 输出风险评分与证据链 → 导出报告。
   </p>
   <ul>
     <li>进程枚举：PID / 名称 / 路径 / 用户 / 父进程</li>
@@ -20,4 +47,104 @@
     <li>输出：风险分值 + 等级 + 命中规则 + 证据链 + 导出</li>
   </ul>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ---- 页面加载时获取 KPI ----
+document.addEventListener('DOMContentLoaded', loadKpi);
+
+async function loadKpi() {
+  try {
+    const resp = await fetch('/api/kpi');
+    const data = await resp.json();
+    document.getElementById('kpi-process-count').textContent = data.process_count;
+    document.getElementById('kpi-total-scans').textContent = data.total_scans;
+    document.getElementById('kpi-high').textContent = data.high;
+    document.getElementById('kpi-mid-low').textContent = (data.mid || 0) + ' / ' + (data.low || 0);
+  } catch (e) {
+    // 静默失败，KPI 显示 —
+  }
+}
+
+// ---- 扫描进程按钮逻辑 ----
+let scanning = false;
+
+async function handleScan() {
+  if (scanning) return;
+  scanning = true;
+
+  const btn = document.getElementById('btn-scan');
+  const icon = btn.querySelector('.btn-icon');
+  const text = btn.querySelector('.btn-text');
+
+  // 切换到加载状态
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  icon.textContent = '⏳';
+  text.textContent = '扫描中...';
+
+  try {
+    const resp = await fetch('/api/scan-processes', { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.ok) {
+      // 成功状态
+      icon.textContent = '✅';
+      text.textContent = '扫描完成 (' + data.count + ' 个进程)';
+      btn.classList.remove('btn-loading');
+      btn.classList.add('btn-success');
+
+      showToast('扫描完成，共发现 ' + data.count + ' 个进程，耗时 ' + (data.duration_ms / 1000).toFixed(1) + ' 秒', 'success');
+
+      // 刷新 KPI
+      loadKpi();
+
+      // 3 秒后恢复初始状态
+      setTimeout(() => {
+        icon.textContent = '🔍';
+        text.textContent = '扫描进程';
+        btn.disabled = false;
+        btn.classList.remove('btn-success');
+        scanning = false;
+      }, 3000);
+    } else {
+      throw new Error(data.error || '扫描失败');
+    }
+  } catch (e) {
+    // 失败状态
+    icon.textContent = '❌';
+    text.textContent = '扫描失败，重试';
+    btn.classList.remove('btn-loading');
+    btn.classList.add('btn-danger');
+
+    showToast('扫描失败：' + e.message, 'error');
+
+    setTimeout(() => {
+      icon.textContent = '🔍';
+      text.textContent = '扫描进程';
+      btn.disabled = false;
+      btn.classList.remove('btn-danger');
+      scanning = false;
+    }, 3000);
+  }
+}
+
+// ---- Toast 提示 ----
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + message + '</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+  container.appendChild(toast);
+
+  // 3 秒后自动消失
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+</script>
 {% endblock %}
