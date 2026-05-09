@@ -13,6 +13,7 @@
   </div>
 </div>
 
+<!-- 评分概览 -->
 <div class="card">
   <div class="hstack" style="justify-content: space-between;">
     <div class="hstack">
@@ -22,8 +23,19 @@
     </div>
     <span class="muted">时间：<span class="mono">{{ scan.created_at }}</span></span>
   </div>
+  {% if scan.summary_reason %}
+  <div class="muted" style="margin-top:8px;">摘要：{{ scan.summary_reason }}</div>
+  {% endif %}
+  {% if scan.score_process or scan.score_network %}
+  <div class="hstack" style="margin-top:8px; gap:16px;">
+    <span>进程维度：<b>{{ scan.score_process }}</b></span>
+    <span>网络维度：<b>{{ scan.score_network }}</b></span>
+    {% if scan.score_memory %}<span>内存维度：<b>{{ scan.score_memory }}</b></span>{% endif %}
+  </div>
+  {% endif %}
 </div>
 
+<!-- 命中规则 -->
 <div class="card">
   <h3 style="margin-top:0;">命中规则</h3>
   <table class="table">
@@ -35,7 +47,7 @@
       <tr>
         <td class="mono">{{ h.rule_id }}</td>
         <td>{{ h.title }}</td>
-        <td class="mono">{{ h.evidence }}</td>
+        <td class="mono" style="font-size:0.85em;">{{ h.evidence }}</td>
       </tr>
       {% endfor %}
       {% if scan.hits|length == 0 %}
@@ -44,4 +56,92 @@
     </tbody>
   </table>
 </div>
+
+<!-- Beaconing 检测结果 -->
+{% if scan.beacon %}
+<div class="card">
+  <h3 style="margin-top:0;">Beaconing 检测</h3>
+  <table class="table">
+    <tbody>
+      <tr>
+        <th>判定</th>
+        <td>
+          {% if scan.beacon.suspected %}
+            <span class="risk-tag tag-suspicious">疑似 Beaconing</span>
+          {% else %}
+            <span class="risk-tag tag-safe">未发现</span>
+          {% endif %}
+          {% if scan.beacon.jitter_like %}
+            <span class="risk-tag tag-unsigned" style="margin-left:4px;">含 Jitter</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% if scan.beacon.interval_cv is not none %}
+      <tr><th>CV (变异系数)</th><td class="mono">{{ "%.4f"|format(scan.beacon.interval_cv) }}</td></tr>
+      {% endif %}
+      {% if scan.beacon.interval_mean_ms is not none %}
+      <tr><th>间隔均值</th><td class="mono">{{ "%.1f"|format(scan.beacon.interval_mean_ms) }} ms</td></tr>
+      {% endif %}
+      {% if scan.beacon.interval_std_ms is not none %}
+      <tr><th>间隔标准差</th><td class="mono">{{ "%.1f"|format(scan.beacon.interval_std_ms) }} ms</td></tr>
+      {% endif %}
+      <tr><th>采样轮数</th><td class="mono">{{ scan.beacon.sample_window }}</td></tr>
+      {% if scan.beacon.notes %}
+      <tr><th>备注</th><td class="muted">{{ scan.beacon.notes }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- 远端 IP 汇总 -->
+{% if scan.remotes %}
+<div class="card">
+  <h3 style="margin-top:0;">远端 IP 汇总</h3>
+  <table class="table">
+    <thead>
+      <tr><th>IP</th><th>端口</th><th>协议</th><th>连接数</th><th>风险提示</th></tr>
+    </thead>
+    <tbody>
+      {% for r in scan.remotes %}
+      <tr>
+        <td class="mono">{{ r.ip }}</td>
+        <td class="mono">{{ r.port }}</td>
+        <td>{{ r.protocol }}</td>
+        <td>{{ r.count }}</td>
+        <td>
+          {% if r.risk_hint %}
+            <span class="risk-tag tag-suspicious">{{ r.risk_hint }}</span>
+          {% else %}
+            <span class="muted">-</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- 连接明细 -->
+{% if scan.connections %}
+<div class="card">
+  <h3 style="margin-top:0;">网络连接明细</h3>
+  <table class="table">
+    <thead>
+      <tr><th>协议</th><th>本地地址</th><th>远端地址</th><th>状态</th></tr>
+    </thead>
+    <tbody>
+      {% for c in scan.connections %}
+      <tr>
+        <td>{{ c.protocol }}</td>
+        <td class="mono">{{ c.local }}</td>
+        <td class="mono">{{ c.remote }}</td>
+        <td>{{ c.state }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

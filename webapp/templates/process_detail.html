@@ -8,11 +8,19 @@
     <div class="muted">PID: <span class="mono">{{ proc.pid }}</span> · {{ proc.name }}</div>
   </div>
   <div class="hstack">
-    <form method="post" action="{{ url_for('process.scan_process', pid=proc.pid) }}">
-      <button class="btn primary" type="submit">扫描此进程</button>
-    </form>
+    <button class="btn primary" id="scanBtn" onclick="startScan()">扫描此进程</button>
     <a class="btn" href="{{ url_for('process.list_processes') }}">返回列表</a>
   </div>
+</div>
+
+<!-- 采样进度面板 -->
+<div id="samplingPanel" class="card" style="display:none;">
+  <h3 style="margin-top:0;">Beaconing 网络采样</h3>
+  <p class="muted" id="samplingStatus">正在采集网络连接数据...</p>
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="samplingBar" style="width: 0%"></div>
+  </div>
+  <div class="muted" id="samplingDetail" style="margin-top:8px;"></div>
 </div>
 
 <div class="card">
@@ -95,4 +103,77 @@
   </div>
 </div>
 {% endif %}
+
+<script>
+function startScan() {
+  var btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = '扫描中...';
+
+  var panel = document.getElementById('samplingPanel');
+  panel.style.display = 'block';
+
+  fetch('{{ url_for("scan.start_scan") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({target: 'pid:{{ proc.pid }}', mode: 'single'})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      alert('扫描失败: ' + (data.error || '未知错误'));
+      btn.disabled = false;
+      btn.textContent = '扫描此进程';
+      return;
+    }
+    pollProgress(data.task_id);
+  })
+  .catch(function(e) {
+    alert('请求失败: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '扫描此进程';
+  });
+}
+
+function pollProgress(taskId) {
+  var bar = document.getElementById('samplingBar');
+  var status = document.getElementById('samplingStatus');
+  var detail = document.getElementById('samplingDetail');
+
+  var timer = setInterval(function() {
+    fetch('{{ url_for("scan.scan_status", task_id="") }}' + taskId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+
+        var p = data.progress || {};
+        var pct = p.total > 0 ? Math.round(p.current / p.total * 100) : 0;
+        bar.style.width = pct + '%';
+
+        if (p.phase === 'sampling') {
+          status.textContent = '正在采集网络连接数据...';
+          detail.textContent = '采样轮次: ' + p.current + ' / ' + p.total + ' (每轮间隔约5秒)';
+        } else if (p.phase === 'done') {
+          status.textContent = '采样完成';
+          detail.textContent = '';
+        } else {
+          status.textContent = '等待启动...';
+          detail.textContent = '';
+        }
+
+        if (data.status === 'done') {
+          clearInterval(timer);
+          window.location.href = '{{ url_for("scan.scan_detail", scan_id="") }}' + data.scan_id;
+        } else if (data.status === 'failed') {
+          clearInterval(timer);
+          alert('扫描失败: ' + (data.error || '未知错误'));
+          var btn = document.getElementById('scanBtn');
+          btn.disabled = false;
+          btn.textContent = '扫描此进程';
+        }
+      })
+      .catch(function() {});
+  }, 1000);
+}
+</script>
 {% endblock %}

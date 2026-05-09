@@ -1,12 +1,13 @@
-"""规则基类、注册装饰器、4 个具体检测规则。"""
+"""规则基类、注册装饰器、5 个具体检测规则。"""
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from utils.rule_engine.context import RuleContext
 from utils.common.constants import SUSPICIOUS_PARENT_CHILD, SUSPICIOUS_PATH_PATTERNS
-from utils.common.validators import is_suspicious_path
+from utils.common.validators import is_suspicious_path, is_system_path
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +125,7 @@ class UnsignedProcessRule(BaseRule):
 
     def check(self, context: RuleContext) -> Optional[RuleHitResult]:
         proc = context.process
-        if proc.signed_status not in ("unsigned", "invalid"):
+        if proc.signed_status == "signed":
             return None
         if proc.is_system:
             return None
@@ -139,6 +140,73 @@ class UnsignedProcessRule(BaseRule):
                 "path": proc.exe_path,
                 "signed_status": proc.signed_status,
                 "detail": f"签名状态为 {proc.signed_status}，非系统路径",
+            },
+        )
+
+
+# ---------------------------------------------------------------------------
+# PROC-004: 可疑进程名
+# ---------------------------------------------------------------------------
+# 已知恶意工具命名模式
+_KNOWN_MALWARE_NAME_PATTERNS = [
+    re.compile(r"^artifact", re.IGNORECASE),       # Cobalt Strike artifact
+    re.compile(r"^beacon", re.IGNORECASE),          # beacon
+    re.compile(r"^payload", re.IGNORECASE),         # payload
+    re.compile(r"^shellcode", re.IGNORECASE),       # shellcode
+    re.compile(r"^inject", re.IGNORECASE),          # injector
+    re.compile(r"^mimikatz", re.IGNORECASE),        # mimikatz
+    re.compile(r"^procdump", re.IGNORECASE),        # procdump
+    re.compile(r"^lazagne", re.IGNORECASE),         # LaZagne
+    re.compile(r"^nmap", re.IGNORECASE),            # nmap
+    re.compile(r"^ncat", re.IGNORECASE),            # ncat
+    re.compile(r"^psexec", re.IGNORECASE),          # PsExec
+]
+
+# 随机命名模式: 8+位纯字母/数字, 如 xjkdqwer.exe
+_RANDOM_NAME_RE = re.compile(r"^[a-z0-9]{8,}\.exe$", re.IGNORECASE)
+
+
+@register_rule
+class SuspiciousNameRule(BaseRule):
+    rule_id = "PROC-004"
+    title = "可疑进程名"
+    dimension = "process"
+    default_weight = 20
+
+    def check(self, context: RuleContext) -> Optional[RuleHitResult]:
+        proc = context.process
+        if not proc.name:
+            return None
+        # 系统路径进程跳过
+        if proc.is_system:
+            return None
+
+        name = proc.name
+        reasons = []
+
+        # 检查已知恶意命名模式
+        for pat in _KNOWN_MALWARE_NAME_PATTERNS:
+            if pat.search(name):
+                reasons.append(f"匹配已知恶意模式 {pat.pattern}")
+                break
+
+        # 检查随机命名
+        if _RANDOM_NAME_RE.match(name):
+            reasons.append("疑似随机命名(8+位字母数字)")
+
+        if not reasons:
+            return None
+
+        return RuleHitResult(
+            rule_id=self.rule_id,
+            title=self.title,
+            dimension=self.dimension,
+            score_delta=self.default_weight,
+            evidence={
+                "name": name,
+                "path": proc.exe_path,
+                "reasons": reasons,
+                "detail": f"进程名 {name}: {'; '.join(reasons)}",
             },
         )
 

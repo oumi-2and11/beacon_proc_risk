@@ -10,6 +10,11 @@ class Config:
     MAX_PROCESSES = 5000
     BEACON_SAMPLE_WINDOW = 20
 
+    # Beaconing 多轮采样配置
+    BEACON_SAMPLING_ENABLED = True     # 是否启用多轮采样
+    BEACON_SAMPLING_INTERVAL = 5       # 采样间隔（秒）
+    BEACON_SAMPLING_ROUNDS = 12        # 采样轮数（共 60 秒）
+
     # ---- 数据库配置（从环境变量读取，不在代码中硬写密码） ----
     # 本地开发默认值对应 docker-compose.yml 中的 MySQL 容器
     DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")

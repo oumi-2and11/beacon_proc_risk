@@ -27,6 +27,11 @@ SUSPICIOUS_PATH_PATTERNS = (
     "\\AppData\\Local\\Temp\\",
     "\\Downloads\\",
     "\\Public\\",
+    "\\Desktop\\",
+    "\\AppData\\Roaming\\",
+    "\\ProgramData\\",
+    "\\PerfLogs\\",
+    "\\Recycle\\",
 )
 
 # 可疑父-子进程关系映射（key=父进程名, value=可疑子进程列表）

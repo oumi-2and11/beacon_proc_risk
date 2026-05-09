@@ -36,8 +36,10 @@ def _count_high_risk():
         or_(
             ProcessCatalog.path_suspicious == True,
             ProcessCatalog.parent_child_suspicious == True,
-            ProcessCatalog.signed_status == "unsigned",
-            ProcessCatalog.signed_status == "invalid",
+            db.and_(
+                ProcessCatalog.signed_status != "signed",
+                ProcessCatalog.is_system == False,
+            ),
         )
     ).count()
 
@@ -74,8 +76,10 @@ def list_processes():
             or_(
                 ProcessCatalog.path_suspicious == True,
                 ProcessCatalog.parent_child_suspicious == True,
-                ProcessCatalog.signed_status == "unsigned",
-                ProcessCatalog.signed_status == "invalid",
+                db.and_(
+                    ProcessCatalog.signed_status != "signed",
+                    ProcessCatalog.is_system == False,
+                ),
             )
         )
 
