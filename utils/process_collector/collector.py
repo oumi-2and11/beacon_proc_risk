@@ -7,6 +7,7 @@ from utils.process_collector.windows import (
     collect_process_list as _collect_list,
     collect_connections_for_pid as _collect_connections,
     collect_single_process,
+    find_proxy_connections,
 )
 import psutil
 

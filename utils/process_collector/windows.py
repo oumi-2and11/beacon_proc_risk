@@ -150,6 +150,13 @@ def collect_process_list(max_processes: int = 5000) -> List[ProcessInfo]:
     return results
 
 
+def _get_proc_connections(proc: psutil.Process):
+    """兼容不同 psutil 版本获取进程连接。"""
+    if hasattr(proc, "net_connections"):
+        return proc.net_connections(kind="inet")
+    return proc.connections(kind="inet")
+
+
 def collect_connections_for_pid(pid: int) -> List[dict]:
     """采集指定进程的网络连接。
 
@@ -157,7 +164,7 @@ def collect_connections_for_pid(pid: int) -> List[dict]:
     """
     try:
         proc = psutil.Process(pid)
-        conns = proc.net_connections(kind="inet")
+        conns = _get_proc_connections(proc)
     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return []
 
@@ -175,3 +182,59 @@ def collect_connections_for_pid(pid: int) -> List[dict]:
             "seen_at": now,
         })
     return results
+
+
+def find_proxy_connections(local_ip: str, local_port: int) -> List[dict]:
+    """当远端是本地回环地址时，追踪代理进程的真实远端连接。
+
+    场景：目标进程连接 127.0.0.1:7897（Clash 代理），
+    实际 C2 地址由代理进程的远端连接决定。
+
+    逻辑：找到监听 (local_ip, local_port) 的进程，获取其远端非回环连接。
+    """
+    import psutil as _ps
+
+    _LOOPBACK = {"127.0.0.1", "0.0.0.0", "::1", "::"}
+
+    # 查找监听该端口的进程
+    proxy_pid = None
+    proxy_name = None
+    try:
+        for conn in _ps.net_connections(kind="inet"):
+            if (conn.status == "LISTEN" and
+                conn.laddr and
+                conn.laddr.port == local_port and
+                conn.laddr.ip in _LOOPBACK):
+                try:
+                    proxy_pid = conn.pid
+                    if proxy_pid:
+                        proxy_name = _ps.Process(proxy_pid).name()
+                except (_ps.NoSuchProcess, _ps.AccessDenied):
+                    pass
+                break
+    except _ps.AccessDenied:
+        pass
+
+    if proxy_pid is None:
+        return []
+
+    # 获取代理进程的远端连接（排除回环），去重并限制数量
+    proxy_conns = collect_connections_for_pid(proxy_pid)
+    seen_keys: set = set()
+    real_remotes = []
+    proxy_label = f"{proxy_name}(PID {proxy_pid})"
+    for c in proxy_conns:
+        rip = c.get("remote_ip", "")
+        rport = c.get("remote_port")
+        if rip and rip not in _LOOPBACK and not rip.startswith("127."):
+            key = (rip, rport)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            c["_proxy_via"] = proxy_label
+            c["_proxy_local"] = f"{local_ip}:{local_port}"
+            real_remotes.append(c)
+            if len(real_remotes) >= 10:
+                break
+
+    return real_remotes

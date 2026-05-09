@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from utils.process_collector.models import ProcessInfo
-from utils.process_collector.collector import get_process_by_pid, get_connections_for_pid
+from utils.process_collector.collector import get_process_by_pid, get_connections_for_pid, find_proxy_connections
 from utils.rule_engine.engine import RuleEngine
 from utils.rule_engine.context import RuleContext
 from utils.rule_engine.rules import RuleHitResult
@@ -150,7 +150,7 @@ def detect_process(
     # 9. 计算评分
     result.score = compute_score(hits)
 
-    # 10. 聚合远端 IP 汇总
+    # 10. 聚合远端 IP 汇总（含代理穿透）
     # 使用最后一轮的连接作为汇总（如果有多轮采样）
     final_conns = conn_details
     if sampling_result and sampling_result.snapshots:
@@ -166,10 +166,47 @@ def detect_process(
                 seen_at=c.get("seen_at", datetime.now()),
             ))
 
+    _LOOPBACK = {"127.0.0.1", "0.0.0.0", "::1", "::"}
     ip_map: dict = {}
+    proxy_resolved: dict = {}  # (local_ip, local_port) -> [real remotes]
+    proxy_labels: dict = {}    # proxy_key -> 标签字符串
+
     for c in final_conns:
         if not c.remote_ip:
             continue
+
+        # 代理穿透：远端是回环地址时，追踪代理进程的真实远端
+        if c.remote_ip in _LOOPBACK or c.remote_ip.startswith("127."):
+            proxy_key = (c.remote_ip, c.remote_port)
+            if proxy_key not in proxy_resolved:
+                proxy_resolved[proxy_key] = find_proxy_connections(c.remote_ip, c.remote_port)
+                # 生成代理标签（只一次）
+                if proxy_resolved[proxy_key]:
+                    proxy_labels[proxy_key] = f"经代理 {proxy_resolved[proxy_key][0].get('_proxy_via', 'proxy')}"
+
+            real_remotes = proxy_resolved[proxy_key]
+            if real_remotes:
+                # 用代理的真实远端替换回环地址
+                for rc in real_remotes:
+                    rip = rc.get("remote_ip")
+                    rport = rc.get("remote_port")
+                    if not rip:
+                        continue
+                    key = (rip, rport, c.protocol)
+                    if key not in ip_map:
+                        ip_map[key] = RemoteSummary(
+                            remote_ip=rip,
+                            remote_port=rport,
+                            protocol=c.protocol,
+                            conn_count=1,
+                            first_seen_at=c.seen_at,
+                            last_seen_at=c.seen_at,
+                        )
+                    else:
+                        ip_map[key].conn_count += 1
+                continue
+            # 代理追踪失败，保留原始回环记录
+
         key = (c.remote_ip, c.remote_port, c.protocol)
         if key not in ip_map:
             ip_map[key] = RemoteSummary(
@@ -184,15 +221,22 @@ def detect_process(
             entry = ip_map[key]
             entry.conn_count += 1
 
+    # 生成 risk_hint（限制长度，避免超出 DB 列宽 128）
     for summary in ip_map.values():
+        parts = []
         if summary.conn_count >= 3:
-            summary.risk_hint = f"高频连接({summary.conn_count}次)"
-        # 标记持久连接
+            parts.append(f"高频({summary.conn_count}次)")
         if sampling_result:
             remote_key = (summary.remote_ip, summary.remote_port)
             if remote_key in sampling_result.persistent_remotes:
-                summary.risk_hint = (summary.risk_hint + "; 持久连接"
-                                     if summary.risk_hint else "持久连接")
+                parts.append("持久连接")
+        # 代理标签（只加一次，不重复）
+        for proxy_key, label in proxy_labels.items():
+            if summary.remote_ip not in _LOOPBACK:
+                parts.append(label)
+                break
+        hint = "; ".join(parts)
+        summary.risk_hint = hint[:120] if len(hint) > 120 else (hint or None)
 
     result.remote_summaries = list(ip_map.values())
 
