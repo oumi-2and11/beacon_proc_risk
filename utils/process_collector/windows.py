@@ -1,6 +1,6 @@
 """Windows 平台进程采集，基于 psutil。"""
 
-import psutil
+import psutil,socket
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -164,7 +164,7 @@ def collect_connections_for_pid(pid: int) -> List[dict]:
     now = datetime.now()
     results = []
     for c in conns:
-        proto = "UDP" if c.type == psutil.SOCK_DGRAM else "TCP"
+        proto = "UDP" if c.type == socket.SOCK_DGRAM else "TCP"
         results.append({
             "protocol": proto,
             "local_ip": c.laddr.ip if c.laddr else None,
