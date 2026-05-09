@@ -9,7 +9,7 @@
   </div>
   <div class="hstack">
     <a class="btn" href="{{ url_for('scan.list_scans') }}">返回扫描中心</a>
-    <a class="btn primary" href="{{ url_for('export.export_scan_json', scan_id=scan.scan_id) }}">导出 JSON</a>
+    <a class="btn primary" href="{{ url_for('export.export_scan_json_route', scan_id=scan.scan_id) }}">导出 JSON</a>
   </div>
 </div>
 

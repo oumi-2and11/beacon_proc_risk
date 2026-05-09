@@ -1,7 +1,7 @@
-from flask import Blueprint, jsonify, render_template, abort
+from flask import Blueprint, render_template, abort
 
 from webapp.models import ScanRun
-from webapp.views.scan_view import scan_run_to_dict
+from utils.data_exporter.exporter import export_scan_json as _json, export_scan_html as _html
 
 export_bp = Blueprint("export", __name__)
 
@@ -15,13 +15,29 @@ def export_home():
 def export_latest_json():
     run = ScanRun.query.order_by(ScanRun.created_at.desc()).first()
     if not run:
-        return jsonify({"status": "empty", "message": "no scans yet"})
-    return jsonify(scan_run_to_dict(run))
+        return {"status": "empty", "message": "no scans yet"}, 200
+    return _json(run)
 
 
 @export_bp.route("/scans/<scan_id>.json", methods=["GET"])
-def export_scan_json(scan_id):
+def export_scan_json_route(scan_id):
     run = ScanRun.query.filter_by(scan_uuid=scan_id).first()
     if not run:
         abort(404)
-    return jsonify(scan_run_to_dict(run))
+    return _json(run)
+
+
+@export_bp.route("/latest.html", methods=["GET"])
+def export_latest_html():
+    run = ScanRun.query.order_by(ScanRun.created_at.desc()).first()
+    if not run:
+        abort(404)
+    return _html(run)
+
+
+@export_bp.route("/scans/<scan_id>.html", methods=["GET"])
+def export_scan_html_route(scan_id):
+    run = ScanRun.query.filter_by(scan_uuid=scan_id).first()
+    if not run:
+        abort(404)
+    return _html(run)

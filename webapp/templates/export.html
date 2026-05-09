@@ -10,10 +10,50 @@
 <div class="card">
   <h3 style="margin-top:0;">快速导出</h3>
   <div class="hstack">
-    <a class="btn primary" href="{{ url_for('export.export_latest_json') }}">导出最近一次扫描（JSON）</a>
+    <a class="btn primary" href="{{ url_for('export.export_latest_json') }}">导出最近扫描（JSON）</a>
+    <a class="btn" href="{{ url_for('export.export_latest_html') }}">导出最近扫描（HTML）</a>
   </div>
-  <p class="muted" style="margin-bottom:0;">
-    后续接 MySQL 后，本页可增加：按 scan_id / 按 PID 导出、导出 HTML 报告等。
-  </p>
 </div>
+
+<div class="card">
+  <h3 style="margin-top:0;">按 Scan ID 导出</h3>
+  <form class="hstack" onsubmit="return doExport()">
+    <input class="input" type="text" id="scan-id-input" placeholder="输入 Scan ID" required>
+    <button class="btn primary" type="submit">导出 JSON</button>
+    <button class="btn" type="button" onclick="doExportHtml()">导出 HTML</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">格式说明</h3>
+  <table class="table">
+    <tbody>
+      <tr>
+        <th>JSON</th>
+        <td>完整嵌套数据，含进程信息、评分、规则命中、Beaconing 统计、远端 IP 汇总、连接明细。适合程序化处理或二次分析。</td>
+      </tr>
+      <tr>
+        <th>HTML</th>
+        <td>独立 HTML 报告，内联样式，可直接在浏览器打印或保存为 PDF。适合作为报告附录。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function doExport() {
+  const scanId = document.getElementById('scan-id-input').value.trim();
+  if (!scanId) return false;
+  window.open('/export/scans/' + scanId + '.json', '_blank');
+  return false;
+}
+
+function doExportHtml() {
+  const scanId = document.getElementById('scan-id-input').value.trim();
+  if (!scanId) { alert('请输入 Scan ID'); return; }
+  window.open('/export/scans/' + scanId + '.html', '_blank');
+}
+</script>
 {% endblock %}
